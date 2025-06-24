@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,11 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileText, Type, Volume2, Music } from 'lucide-react';
+import { Type, Volume2, Music } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from "@/hooks/use-toast";
 import { useVideoGeneration } from '@/hooks/useVideoGeneration';
 import VideoPlayer from '@/components/VideoPlayer';
+import FileUpload from '@/components/FileUpload';
 
 const NewProject = () => {
   const [text, setText] = useState("");
@@ -27,20 +27,8 @@ const NewProject = () => {
   const { toast } = useToast();
   const { generateVideo, isGenerating, generationStatus, videoUrl } = useVideoGeneration();
 
-  const handleTextUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        setText(content);
-        toast({
-          title: "File uploaded successfully",
-          description: `${file.name} has been uploaded`,
-        });
-      };
-      reader.readAsText(file);
-    }
+  const handleTextExtracted = (extractedText: string) => {
+    setText(extractedText);
   };
 
   const analyzeText = () => {
@@ -103,7 +91,7 @@ const NewProject = () => {
               Text Input
             </TabsTrigger>
             <TabsTrigger value="upload" className="flex gap-2">
-              <Upload className="h-4 w-4" />
+              <Type className="h-4 w-4" />
               Upload File
             </TabsTrigger>
           </TabsList>
@@ -140,36 +128,7 @@ const NewProject = () => {
         </TabsContent>
 
         <TabsContent value="upload" className="animate-fade-in">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload a Document</CardTitle>
-              <CardDescription>
-                Upload a .txt or .docx file containing your text
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-muted rounded-lg p-10 text-center">
-                <div className="flex flex-col items-center justify-center gap-4">
-                  <FileText className="h-10 w-10 text-muted-foreground" />
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium">Drag and drop your file here</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Supported formats: .txt, .docx
-                    </p>
-                  </div>
-                  <label className="cursor-pointer">
-                    <Input 
-                      type="file" 
-                      className="hidden"
-                      accept=".txt,.docx" 
-                      onChange={handleTextUpload}
-                    />
-                    <Button variant="outline">Select File</Button>
-                  </label>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <FileUpload onTextExtracted={handleTextExtracted} />
         </TabsContent>
       </Tabs>
 
@@ -186,6 +145,7 @@ const NewProject = () => {
           {isAnalyzed && (
             <>
               <Separator />
+              
               <div className="grid md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>

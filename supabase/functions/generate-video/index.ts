@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Replicate from "https://esm.sh/replicate@0.25.2"
 
@@ -16,6 +15,8 @@ serve(async (req) => {
 
   try {
     const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')
+    console.log('API Key retrieved:', REPLICATE_API_KEY ? 'Present' : 'Missing')
+    
     if (!REPLICATE_API_KEY) {
       throw new Error('REPLICATE_API_KEY is not set')
     }
@@ -51,14 +52,33 @@ serve(async (req) => {
 
     console.log("Generating video with text:", body.text)
     
-    // Using a text-to-video model - you can change this to other models as needed
+    // Parse aspect ratio for width and height
+    const [widthStr, heightStr] = body.aspectRatio?.split(':') || ['16', '9']
+    const aspectWidth = parseInt(widthStr) || 16
+    const aspectHeight = parseInt(heightStr) || 9
+    
+    // Calculate dimensions based on aspect ratio (keeping reasonable sizes)
+    let width = 512
+    let height = 512
+    
+    if (aspectWidth > aspectHeight) {
+      // Landscape
+      width = 576
+      height = Math.round(576 * aspectHeight / aspectWidth)
+    } else if (aspectHeight > aspectWidth) {
+      // Portrait
+      height = 576
+      width = Math.round(576 * aspectWidth / aspectHeight)
+    }
+    
+    // Using zeroscope text-to-video model
     const prediction = await replicate.predictions.create({
       version: "anotherjesse/zeroscope-v2-xl:9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351",
       input: {
         prompt: body.text,
         model_name: "zeroscope_v2_XL",
-        width: parseInt(body.aspectRatio?.split(':')[0] || "576"),
-        height: parseInt(body.aspectRatio?.split(':')[1] || "320"),
+        width: width,
+        height: height,
         num_frames: 24,
         num_inference_steps: 50,
         guidance_scale: 17.5,
@@ -76,7 +96,10 @@ serve(async (req) => {
     })
   } catch (error) {
     console.error("Error in generate-video function:", error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.toString()
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })
