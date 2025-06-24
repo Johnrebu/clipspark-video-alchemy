@@ -10,18 +10,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload, FileText, Type, Volume2, Music } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from "@/hooks/use-toast";
+import { useVideoGeneration } from '@/hooks/useVideoGeneration';
+import VideoPlayer from '@/components/VideoPlayer';
 
 const NewProject = () => {
   const [text, setText] = useState("");
   const [projectName, setProjectName] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
+  const [voiceStyle, setVoiceStyle] = useState("conversational");
+  const [voiceGender, setVoiceGender] = useState("female");
+  const [narrationSpeed, setNarrationSpeed] = useState("medium");
+  const [videoStyle, setVideoStyle] = useState("cinematic");
+  const [musicType, setMusicType] = useState("ambient");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
   const { toast } = useToast();
+  const { generateVideo, isGenerating, generationStatus, videoUrl } = useVideoGeneration();
 
   const handleTextUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // In a real app, we'd parse the file content
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
@@ -56,6 +64,28 @@ const NewProject = () => {
         description: "Your text has been analyzed and is ready for video creation",
       });
     }, 2000);
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!projectName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a project name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await generateVideo({
+      text,
+      projectName,
+      voiceStyle,
+      voiceGender,
+      narrationSpeed,
+      videoStyle,
+      musicType,
+      aspectRatio,
+    });
   };
 
   return (
@@ -167,7 +197,7 @@ const NewProject = () => {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="voiceStyle">Voice Style</Label>
-                      <Select defaultValue="conversational">
+                      <Select value={voiceStyle} onValueChange={setVoiceStyle}>
                         <SelectTrigger id="voiceStyle">
                           <SelectValue placeholder="Select voice style" />
                         </SelectTrigger>
@@ -181,7 +211,7 @@ const NewProject = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="voiceGender">Voice Gender</Label>
-                      <Select defaultValue="female">
+                      <Select value={voiceGender} onValueChange={setVoiceGender}>
                         <SelectTrigger id="voiceGender">
                           <SelectValue placeholder="Select voice gender" />
                         </SelectTrigger>
@@ -193,7 +223,7 @@ const NewProject = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="narrationSpeed">Narration Speed</Label>
-                      <Select defaultValue="medium">
+                      <Select value={narrationSpeed} onValueChange={setNarrationSpeed}>
                         <SelectTrigger id="narrationSpeed">
                           <SelectValue placeholder="Select speed" />
                         </SelectTrigger>
@@ -217,7 +247,7 @@ const NewProject = () => {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="videoStyle">Video Style</Label>
-                      <Select defaultValue="cinematic">
+                      <Select value={videoStyle} onValueChange={setVideoStyle}>
                         <SelectTrigger id="videoStyle">
                           <SelectValue placeholder="Select video style" />
                         </SelectTrigger>
@@ -231,7 +261,7 @@ const NewProject = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="musicType">Music Type</Label>
-                      <Select defaultValue="ambient">
+                      <Select value={musicType} onValueChange={setMusicType}>
                         <SelectTrigger id="musicType">
                           <SelectValue placeholder="Select music type" />
                         </SelectTrigger>
@@ -245,7 +275,7 @@ const NewProject = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="aspectRatio">Aspect Ratio</Label>
-                      <Select defaultValue="16:9">
+                      <Select value={aspectRatio} onValueChange={setAspectRatio}>
                         <SelectTrigger id="aspectRatio">
                           <SelectValue placeholder="Select ratio" />
                         </SelectTrigger>
@@ -261,12 +291,23 @@ const NewProject = () => {
               </div>
 
               <div className="flex justify-center pt-4">
-                <Button className="w-full md:w-auto">
-                  Generate Video
+                <Button 
+                  className="w-full md:w-auto" 
+                  onClick={handleGenerateVideo}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? generationStatus : 'Generate Video'}
                 </Button>
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {videoUrl && (
+        <div className="space-y-6 animate-fade-in">
+          <Separator />
+          <VideoPlayer videoUrl={videoUrl} projectName={projectName} />
         </div>
       )}
     </div>
