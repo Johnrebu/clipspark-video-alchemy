@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Replicate from "https://esm.sh/replicate@0.25.2"
 
@@ -14,12 +15,36 @@ serve(async (req) => {
   }
 
   try {
-    const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')
-    console.log('API Key retrieved:', REPLICATE_API_KEY ? 'Present' : 'Missing')
+    let REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')
+    console.log('Raw API Key retrieved:', REPLICATE_API_KEY ? 'Present' : 'Missing')
+    console.log('API Key length:', REPLICATE_API_KEY?.length || 0)
     
     if (!REPLICATE_API_KEY) {
-      throw new Error('REPLICATE_API_KEY is not set')
+      throw new Error('REPLICATE_API_KEY is not set in Supabase secrets')
     }
+
+    // Clean the API key - remove any export statements or extra text
+    REPLICATE_API_KEY = REPLICATE_API_KEY.trim()
+    
+    // If the key contains "export" or "=" it means it's the full export statement
+    if (REPLICATE_API_KEY.includes('export') || REPLICATE_API_KEY.includes('=')) {
+      console.log('API key contains export statement, extracting actual key...')
+      // Extract just the key part after the equals sign
+      const keyMatch = REPLICATE_API_KEY.match(/r8_[A-Za-z0-9]+/)
+      if (keyMatch) {
+        REPLICATE_API_KEY = keyMatch[0]
+        console.log('Extracted key:', REPLICATE_API_KEY.substring(0, 10) + '...')
+      } else {
+        throw new Error('Could not extract valid API key from the secret value')
+      }
+    }
+
+    // Validate API key format
+    if (!REPLICATE_API_KEY.startsWith('r8_')) {
+      throw new Error('Invalid Replicate API key format. Key should start with "r8_"')
+    }
+
+    console.log('Using API key:', REPLICATE_API_KEY.substring(0, 10) + '...')
 
     const replicate = new Replicate({
       auth: REPLICATE_API_KEY,
@@ -70,6 +95,8 @@ serve(async (req) => {
       height = 576
       width = Math.round(576 * aspectWidth / aspectHeight)
     }
+    
+    console.log("Creating prediction with dimensions:", { width, height })
     
     // Using zeroscope text-to-video model
     const prediction = await replicate.predictions.create({
